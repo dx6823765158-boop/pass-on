@@ -1,0 +1,84 @@
+rules_version = '2';
+// Security Rules สำหรับ Pass On (เวอร์ชันโปรเจ็กต์รายวิชา — ยังไม่มี Firebase Auth)
+// ทุกคนอ่านได้ / สร้างได้ / แก้ได้เฉพาะบางช่อง / ห้ามลบ
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // โปรไฟล์ผู้ใช้ — doc id = รหัสนักศึกษา 10 หลัก
+    match /users/{sid} {
+      allow read: if true;
+      allow create, update: if sid.matches('^[0-9]{10}$')
+                    && request.resource.data.studentId == sid
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 40
+                    && (!('bio' in request.resource.data) || request.resource.data.bio.size() <= 200)
+                    && (request.resource.data.get('photo', null) == null
+                        || (request.resource.data.photo is string && request.resource.data.photo.size() < 400000));
+      allow delete: if false;
+    }
+
+    match /courses/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.code is string
+                    && request.resource.data.name is string
+                    && request.resource.data.code.size() <= 20
+                    && request.resource.data.name.size() <= 120;
+      // แก้ได้เฉพาะชื่ออาจารย์ผู้สอน
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['instructor'])
+                    && request.resource.data.instructor.size() <= 120;
+      allow delete: if false;
+    }
+
+    match /posts/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.title is string
+                    && request.resource.data.content is string
+                    && request.resource.data.title.size() <= 200
+                    && request.resource.data.content.size() <= 20000
+                    && request.resource.data.type in ['summary', 'problem', 'project'];
+      // likes/comments = ผู้ใช้ทั่วไป, hidden = แอดมินซ่อนโพสต์
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'comments', 'hidden']);
+      allow delete: if false;
+    }
+
+    match /threads/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.title is string
+                    && request.resource.data.body is string
+                    && request.resource.data.title.size() <= 200
+                    && request.resource.data.body.size() <= 10000;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replies', 'hidden']);
+      allow delete: if false;
+    }
+
+    // ตารางสอบ (แอดมินจัดการ) — หมายเหตุ: PIN แอดมินตรวจในแอปเท่านั้น
+    match /events/{id} {
+      allow read: if true;
+      allow create, update: if request.resource.data.title is string
+                    && request.resource.data.title.size() <= 100
+                    && request.resource.data.date is string
+                    && request.resource.data.kind in ['midterm', 'final', 'quiz', 'project', 'other'];
+      allow delete: if true;
+    }
+
+    // ประกาศหน้าแรก
+    match /config/{id} {
+      allow read: if true;
+      allow write: if id == 'home'
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() <= 200;
+    }
+
+    // ไฟล์แนบ (รูป / PDF / เอกสาร) — แบ่งเป็นชิ้น ชิ้นละไม่เกิน ~700 KB, เขียนครั้งเดียว แก้/ลบไม่ได้
+    match /files/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.data is string
+                    && request.resource.data.data.size() <= 750000
+                    && request.resource.data.i is int
+                    && request.resource.data.n is int
+                    && request.resource.data.n <= 12;
+      allow update, delete: if false;
+    }
+  }
+}

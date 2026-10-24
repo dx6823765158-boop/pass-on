@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Pass On",
+    "slug": "pass-on",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F4F0EA"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "th.ac.tu.citu.passon"
+    },
+    "android": {
+      "package": "th.ac.tu.citu.passon",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F4F0EA"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "Pass On — รุ่นพี่สู่รุ่นน้อง",
+      "backgroundColor": "#F4F0EA"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pass On ขอเข้าถึงรูปภาพ เพื่อใช้เป็นรูปโปรไฟล์และแนบรูปในโพสต์"
+        }
+      ]
+    ]
+  }
+}
