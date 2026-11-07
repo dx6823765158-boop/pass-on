@@ -31,6 +31,7 @@ export type Database = {
       }
       announcements: {
         Row: {
+          color: string
           created_at: string
           created_by: string | null
           id: number
@@ -38,6 +39,7 @@ export type Database = {
           text: string
         }
         Insert: {
+          color?: string
           created_at?: string
           created_by?: string | null
           id?: never
@@ -45,6 +47,7 @@ export type Database = {
           text: string
         }
         Update: {
+          color?: string
           created_at?: string
           created_by?: string | null
           id?: never
@@ -614,6 +617,92 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          comment_id: number | null
+          created_at: string
+          id: number
+          post_id: number
+          reason: string
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["report_status"]
+        }
+        Insert: {
+          comment_id?: number | null
+          created_at?: string
+          id?: never
+          post_id: number
+          reason: string
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Update: {
+          comment_id?: number | null
+          created_at?: string
+          id?: never
+          post_id?: number
+          reason?: string
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "post_stats"
+            referencedColumns: ["post_id"]
+          },
+          {
+            foreignKeyName: "reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "user_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Views: {
       post_stats: {
@@ -675,6 +764,7 @@ export type Database = {
       enrollment_status: "studying" | "completed"
       exam_kind: "midterm" | "final" | "quiz" | "project" | "other"
       post_status: "published" | "hidden"
+      report_status: "open" | "resolved"
       user_role: "student" | "admin"
     }
     CompositeTypes: {
@@ -789,6 +879,7 @@ export const Constants = {
       enrollment_status: ["studying", "completed"],
       exam_kind: ["midterm", "final", "quiz", "project", "other"],
       post_status: ["published", "hidden"],
+      report_status: ["open", "resolved"],
       user_role: ["student", "admin"],
     },
   },

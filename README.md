@@ -7,83 +7,78 @@
 แอปส่งต่อความรู้จากรุ่นพี่สู่รุ่นน้อง สำหรับนักศึกษาหลักสูตร **dX — Digital Transformation & Innovation**
 วิทยาลัยนวัตกรรม มหาวิทยาลัยธรรมศาสตร์ (CITU) · โปรเจ็กต์รายวิชา DX212
 
-สร้างด้วย **Expo SDK 54 / React Native 0.81** — รันได้ทั้ง Android, iOS และเว็บจากโค้ดชุดเดียว
+สร้างด้วย **Expo SDK 54 / React Native 0.81 + Supabase** (Auth, Postgres, Storage, Realtime) — รันได้ทั้ง Android, iOS และเว็บจากโค้ดชุดเดียว
 
 ## ฟีเจอร์
 
-- **สรุปแนวข้อสอบ / ปัญหาที่เจอ / โปรเจ็กต์รุ่นพี่** แยกตามรายวิชา dX ครบ 4 ปี (58 วิชา ตาม มคอ.2 พ.ศ. 2566)
-- **แนบรูปและไฟล์** (PDF, Word, PowerPoint, Excel) สูงสุด 5 ไฟล์/โพสต์ ดูรูปเต็มจอ เปิดไฟล์ได้ทันที
-- **กระทู้ถาม-ตอบ** ไลก์ คอมเมนต์
-- **โปรไฟล์** รูปโปรไฟล์ สถานะ ลายปก กรอบรูป ความสนใจ วิชาที่ถนัด เลเวล XP และเหรียญสะสม
-- **นับถอยหลังสู่การสอบ** (ตารางจากแอดมิน + วันสอบส่วนตัว) พร้อมคำให้กำลังใจที่สลับไปเรื่อย ๆ
-- **สภาพอากาศ ฝุ่น PM2.5 และ UV** ที่ มธ. ท่าพระจันทร์ (Open-Meteo) + "วันนี้ควรพก"
-- **โหมดแอดมิน** จัดการตารางสอบ ประกาศหน้าแรก ซ่อนเนื้อหา ดูภาพรวม
-- รายชื่ออาจารย์หลักสูตร dX จาก citu.tu.ac.th · Dark mode · ฟอนต์ Prompt
+- **เข้าสู่ระบบด้วยอีเมล มธ.** (`@dome.tu.ac.th`) + รหัส OTP — ไม่มีรหัสผ่านให้จำ
+- **สรุปแนวข้อสอบ / ปัญหาที่เจอ / โปรเจ็กต์รุ่นพี่** แยกตามรายวิชา dX 58 วิชา (มคอ.2 พ.ศ. 2566)
+- **แนบรูปและไฟล์** (PDF, Word, PowerPoint, Excel) สูงสุด 5 ไฟล์ × 10 MB ต่อโพสต์
+- **กระทู้ถาม-ตอบ** เจ้าของกระทู้เลือก "คำตอบที่ดีที่สุด" ได้ · ไลก์ · คอมเมนต์ · อัปเดตทันทีแบบ realtime
+- **โปรไฟล์** รูป สถานะ ลายปก กรอบรูป ความสนใจ วิชาที่ถนัด เลเวล XP และเหรียญสะสม
+- **วิชาที่กำลังเรียน** — เรียนจบแล้วแอปชวน "ส่งต่อสรุป" ให้รุ่นน้อง
+- **นับถอยหลังสู่การสอบ** (ตารางจากแอดมิน + วันสอบส่วนตัว ซิงก์ทุกเครื่อง)
+- **รายงานเนื้อหาไม่เหมาะสม** และ **แผงแอดมิน**: ตรวจรายงาน ซ่อนโพสต์ ตารางสอบ ประกาศ ภาพรวม
+- สภาพอากาศ ฝุ่น PM2.5 และ UV ที่ มธ. ท่าพระจันทร์ · รายชื่ออาจารย์ · Dark mode · ฟอนต์ Prompt
 
 ## เริ่มใช้งาน (เครื่องตัวเอง)
 
 ต้องมี [Node.js 20+](https://nodejs.org) และแอป **Expo Go** บนมือถือ
 
 ```bash
-git clone <repo-url>
-cd pass-on
 npm install
+cp .env.example .env.local   # ใส่ URL + publishable key ของ Supabase
 npx expo start
 ```
 
-- สแกน QR ด้วย Expo Go (Android) หรือกล้อง (iOS) → แอปเปิดบนมือถือ
-- กด `w` เพื่อเปิดเวอร์ชันเว็บในเบราว์เซอร์
+- สแกน QR ด้วย Expo Go (Android) หรือกล้อง (iOS) · กด `w` เพื่อเปิดบนเว็บ
+- `npm test` — ทดสอบการแสดงผลทุกหน้า (jest-expo, mock เฉพาะชั้นข้อมูล)
 
-## ตั้งค่า Firebase (แชร์ข้อมูลกับทุกคน)
+## ตั้งค่า Supabase (ครั้งแรก)
 
-ถ้าไม่ตั้งค่า แอปจะทำงานแบบ **เก็บข้อมูลในเครื่อง** (เหมาะกับเดโม)
+โปรเจกต์ปัจจุบัน: `pass-on` (`mtqschdjrndgixqknzep`, Singapore) — ถ้าสร้างใหม่ ให้รัน SQL ใน [`supabase/migrations/`](supabase/migrations/) ตามลำดับชื่อไฟล์
 
-1. สร้างโปรเจ็กต์ที่ [console.firebase.google.com](https://console.firebase.google.com) → เพิ่ม Web app → คัดลอก `firebaseConfig`
-2. **Build → Firestore Database → Create database** (แนะนำ `asia-southeast1`)
-3. แท็บ **Rules** → วางเนื้อหาไฟล์ [`firestore.rules`](firestore.rules) → **Publish**
-4. วางค่าลงใน `firebaseConfig` ด้านบนของ `App.js`
+ใน **Supabase Dashboard** ต้องตั้งเองอีก 3 อย่าง:
 
-> แอปคุยกับ Firestore ผ่าน REST API โดยตรง (ไม่ใช้ Firebase SDK) และเก็บไฟล์แนบเป็นชิ้นใน Firestore
-> จึงใช้ได้กับ **แพ็กเกจฟรี (Spark)** ไม่ต้องเปิด Firebase Storage
+1. **Authentication → Email Templates** → *Magic Link* และ *Confirm signup*: ใส่รหัสในเนื้อหาอีเมล เช่น
+   `<p>รหัสเข้าสู่ระบบ Pass On: <b>{{ .Token }}</b></p>` (ค่าเริ่มต้นส่งแค่ลิงก์)
+2. **Authentication → SMTP Settings**: ตั้ง SMTP ของตัวเอง (เช่น Resend / Brevo) — อีเมลในตัวของ Supabase ส่งได้แค่ไม่กี่ฉบับต่อชั่วโมง
+3. **ตั้งแอดมินคนแรก** (หลังสมัครและสร้างโปรไฟล์แล้ว) — SQL Editor:
+   ```sql
+   update profiles set role = 'admin' where student_id = '66xxxxxxxx';
+   ```
 
-## สร้างไฟล์ APK สำหรับติดตั้งบน Android
+สมัครได้เฉพาะโดเมนในตาราง `allowed_email_domains` (`dome.tu.ac.th`, `tu.ac.th`) — ทดสอบด้วย gmail ได้โดยเพิ่ม `gmail.com` ชั่วคราว
+
+## ความปลอดภัย
+
+- สิทธิ์ทั้งหมดบังคับที่ฐานข้อมูลด้วย **Row Level Security** — ไม่ใช่ในแอป (publishable key เปิดเผยได้)
+- แก้/ลบได้เฉพาะเนื้อหาของตัวเอง · แอดมินดูจาก `profiles.role` · ผู้ใช้ตั้งตัวเองเป็นแอดมินหรือเปลี่ยนรหัสนักศึกษาเองไม่ได้
+- ไฟล์แนบอยู่ใน bucket private เปิดด้วย signed URL · โพสต์ที่ถูกซ่อนจะเปิดไฟล์ไม่ได้ด้วย
+
+## สร้าง APK / เว็บ
 
 ```bash
-npm install -g eas-cli
-eas login            # ใช้บัญชี expo.dev (สมัครฟรี)
-eas build -p android --profile preview
+npm install -g eas-cli && eas login
+eas build -p android --profile preview      # ได้ไฟล์ .apk (ค่า Supabase อยู่ใน eas.json)
 ```
 
-เมื่อ build เสร็จจะได้ลิงก์ดาวน์โหลดไฟล์ `.apk` ส่งให้เพื่อนติดตั้งได้เลย
-
-## เวอร์ชันเว็บบน GitHub Pages
-
-มี workflow ที่ [`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml) build เว็บและ deploy ให้อัตโนมัติทุกครั้งที่ push ขึ้น `main`
-เปิดใช้ครั้งแรก: **Settings → Pages → Source: GitHub Actions** แล้วเว็บจะอยู่ที่ `https://<username>.github.io/<repo>/`
-
-## ตั้งค่าอื่น ๆ (ใน `App.js`)
-
-| ค่า | ใช้ทำอะไร |
-|---|---|
-| `firebaseConfig` | เชื่อม Firestore |
-| `ADMIN_PIN` | PIN เข้าโหมดแอดมิน (ค่าเริ่มต้น `2569` — เปลี่ยนก่อนใช้จริง) |
-| `COURSE_LIST` | รายวิชาในหลักสูตร |
-| `CHEERS` | คำให้กำลังใจบนหน้าแรก |
-| `CAMPUS` | พิกัดสำหรับสภาพอากาศ |
-
-## ข้อควรรู้ด้านความปลอดภัย
-
-ตอนนี้ล็อกอินด้วยรหัสนักศึกษาที่พิมพ์เอง และ PIN แอดมินตรวจในแอปเท่านั้น — เหมาะกับเดโมในรายวิชา
-ถ้าจะเปิดใช้จริง ควรเพิ่ม **Firebase Authentication** (เช่น ล็อกอินด้วยอีเมลมหาวิทยาลัย) และกำหนดสิทธิ์แอดมินใน Security Rules
+เว็บ: workflow [`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml) deploy ขึ้น GitHub Pages ทุกครั้งที่ push `main`
+ตั้งครั้งแรก: **Settings → Pages → Source: GitHub Actions** และ **Settings → Secrets and variables → Actions → Variables**: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_KEY`
 
 ## โครงสร้างโปรเจ็กต์
 
 ```
-App.js                 แอปทั้งหมด (หน้าจอ, ข้อมูล, สไตล์)
-app.json               ชื่อแอป ไอคอน สิทธิ์การเข้าถึงรูป
-app.config.js          ตั้ง baseUrl ตอน build เว็บ
-eas.json               โปรไฟล์ build APK / production
-firestore.rules        Security Rules ของ Firestore
-assets/                ไอคอนและ splash จากโลโก้ Pass On
-.github/workflows/     deploy เว็บขึ้น GitHub Pages
+App.js                    session, โหลดข้อมูล, navigation, actions ทั้งหมด (context)
+src/lib/supabase.js       Supabase client
+src/api/profiles.js       โปรไฟล์ + รูปโปรไฟล์ + วิชาที่ถนัด
+src/api/content.js        โพสต์ ไฟล์แนบ ไลก์ คอมเมนต์ ตารางสอบ ประกาศ รายงาน realtime
+src/screens/              หน้าจอ (auth, home, browse, post, qa, profile, admin)
+src/components/           คอมโพเนนต์ (ui, content, profile, home)
+src/modals.js             หน้าต่างลอย (อัปโหลด ตั้งกระทู้ วันสอบ ฯลฯ)
+src/theme.js · constants.js · utils.js · context.js
+src/types/database.ts     type ที่ generate จาก schema
+supabase/migrations/      schema + RLS + storage + ข้อมูลวิชา/อาจารย์
+__tests__/                ทดสอบการแสดงผล
+docs/PLAN-supabase.md     แผนและบันทึกการย้ายจาก mockup
 ```

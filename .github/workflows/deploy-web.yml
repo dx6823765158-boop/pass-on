@@ -1,5 +1,7 @@
 # Build the web version and publish it to GitHub Pages on every push to main.
 # One-time setup: repo Settings → Pages → Source: "GitHub Actions"
+#                 repo Settings → Secrets and variables → Actions → Variables:
+#                 EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_KEY (ค่าเดียวกับ .env.local)
 name: Deploy web to GitHub Pages
 
 on:
@@ -30,6 +32,8 @@ jobs:
         run: npx expo export --platform web
         env:
           EXPO_BASE_URL: /${{ github.event.repository.name }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_KEY }}
       - name: SPA fallback
         run: cp dist/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v3
