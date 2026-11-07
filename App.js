@@ -35,6 +35,8 @@ import { Prompt_400Regular } from '@expo-google-fonts/prompt/400Regular';
 import { Prompt_500Medium } from '@expo-google-fonts/prompt/500Medium';
 import { Prompt_600SemiBold } from '@expo-google-fonts/prompt/600SemiBold';
 import { Prompt_700Bold } from '@expo-google-fonts/prompt/700Bold';
+import { supabase, USE_SUPABASE } from './src/lib/supabase';
+import { fetchMyProfile, fetchAllProfiles, isStudentIdTaken, saveMyProfile, authErrorMessage } from './src/api/profiles';
 
 /* ============================ Firebase config ============================
  * วางค่าจาก Firebase Console → Project settings → Your apps → Web app
@@ -1252,6 +1254,14 @@ function AuthFlow({ initialStep = 'welcome' }) {
   const [step, setStep] = useState(initialStep);
   const [prefillId, setPrefillId] = useState('');
 
+  const [email, setEmail] = useState('');
+
+  if (USE_SUPABASE) {
+    if (step === 'email' || step === 'login' || step === 'register') {
+      return <EmailLoginScreen initialEmail={email} onBack={() => setStep('welcome')} onSent={(e) => { setEmail(e); setStep('verify'); }} />;
+    }
+    if (step === 'verify') return <VerifyCodeScreen email={email} onBack={() => setStep('email')} />;
+  }
   if (step === 'login') return <LoginScreen onBack={() => setStep('welcome')} onRegister={(sid) => { setPrefillId(sid); setStep('register'); }} />;
   if (step === 'register') return <RegisterScreen prefillId={prefillId} onBack={() => setStep('welcome')} onLogin={() => setStep('login')} />;
 
@@ -1266,8 +1276,17 @@ function AuthFlow({ initialStep = 'welcome' }) {
         คลังสรุปแนวข้อสอบ กระทู้ถาม-ตอบ และโปรเจ็กต์ของรุ่นพี่ หลักสูตร dX · วิทยาลัยนวัตกรรม มธ.
       </Text>
       <View style={{ marginTop: 'auto', paddingTop: 36 }}>
-        <Btn title="สร้างโปรไฟล์ใหม่" arrow block onPress={() => setStep('register')} />
-        <Btn title="มีโปรไฟล์แล้ว · เข้าสู่ระบบ" variant="outline" block style={{ marginTop: 10 }} onPress={() => setStep('login')} />
+        {USE_SUPABASE ? (
+          <>
+            <Btn title="เข้าสู่ระบบด้วยอีเมล มธ." arrow block onPress={() => setStep('email')} />
+            <Text style={[s.hint, { textAlign: 'center', marginTop: 10 }]}>ครั้งแรกระบบจะสร้างบัญชีให้อัตโนมัติ</Text>
+          </>
+        ) : (
+          <>
+            <Btn title="สร้างโปรไฟล์ใหม่" arrow block onPress={() => setStep('register')} />
+            <Btn title="มีโปรไฟล์แล้ว · เข้าสู่ระบบ" variant="outline" block style={{ marginTop: 10 }} onPress={() => setStep('login')} />
+          </>
+        )}
         <Text style={[s.hint, { textAlign: 'center', marginTop: 16 }]}>Digital Transformation & Innovation · CITU</Text>
       </View>
     </ScrollView>
@@ -1285,6 +1304,123 @@ function AuthHeader({ onBack, title, sub }) {
       <Text style={[s.display, { fontSize: 30, lineHeight: 42, marginTop: 18 }]}>{title}</Text>
       {sub ? <Text style={[s.smallMuted, { marginTop: 4 }]}>{sub}</Text> : null}
     </View>
+  );
+}
+
+/* ---------- Supabase: ล็อกอินด้วยอีเมล + รหัส OTP ---------- */
+const OTP_RESEND_SEC = 60;
+
+function EmailLoginScreen({ initialEmail, onBack, onSent }) {
+  const { s } = useApp();
+  const [email, setEmail] = useState(initialEmail || '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async () => {
+    const e = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { setError('รูปแบบอีเมลไม่ถูกต้อง'); return; }
+    setBusy(true);
+    setError('');
+    const { error: err } = await supabase.auth.signInWithOtp({ email: e, options: { shouldCreateUser: true } });
+    setBusy(false);
+    if (err) setError(authErrorMessage(err));
+    else onSent(e);
+  };
+  return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={s.authScroll} keyboardShouldPersistTaps="handled">
+        <AuthHeader onBack={onBack} title="เข้าสู่ระบบ 👋" sub="กรอกอีเมลมหาวิทยาลัย ระบบจะส่งรหัสยืนยันไปให้" />
+        <Field
+          label="อีเมล"
+          value={email}
+          onChangeText={(v) => { setEmail(v); setError(''); }}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          placeholder="ชื่อ.นามสกุล@dome.tu.ac.th"
+          onSubmitEditing={submit}
+        />
+        {error ? (
+          <Card style={[s.notice, { backgroundColor: PASTEL.pink.tile }]}><Text style={s.noticeTxt}>{error}</Text></Card>
+        ) : null}
+        <Btn title={busy ? 'กำลังส่งรหัส...' : 'ส่งรหัสยืนยัน'} arrow block disabled={busy} onPress={submit} style={{ marginTop: 6 }} />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+function VerifyCodeScreen({ email, onBack }) {
+  const { s } = useApp();
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [wait, setWait] = useState(OTP_RESEND_SEC);
+  useEffect(() => {
+    if (wait <= 0) return undefined;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+  const verify = async () => {
+    const token = code.trim();
+    if (!/^\d{6,8}$/.test(token)) { setError('กรอกรหัสตัวเลขจากอีเมล'); return; }
+    setBusy(true);
+    setError('');
+    const { error: err } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+    setBusy(false);
+    if (err) setError(authErrorMessage(err));
+    // สำเร็จ → onAuthStateChange ใน PassOnApp พาไปหน้าถัดไปเอง
+  };
+  const resend = async () => {
+    setWait(OTP_RESEND_SEC);
+    setError('');
+    const { error: err } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    if (err) setError(authErrorMessage(err));
+    else notify('ส่งรหัสใหม่แล้ว', 'ตรวจกล่องจดหมาย (และโฟลเดอร์ Junk/Spam) ของ ' + email);
+  };
+  return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={s.authScroll} keyboardShouldPersistTaps="handled">
+        <AuthHeader onBack={onBack} title="ใส่รหัสยืนยัน" sub={'ส่งรหัสไปที่ ' + email + ' แล้ว'} />
+        <Field
+          label="รหัสจากอีเมล"
+          value={code}
+          onChangeText={(v) => { setCode(v.replace(/\D/g, '')); setError(''); }}
+          keyboardType="number-pad"
+          autoComplete="one-time-code"
+          textContentType="oneTimeCode"
+          maxLength={8}
+          placeholder="เช่น 123456"
+          onSubmitEditing={verify}
+        />
+        {error ? (
+          <Card style={[s.notice, { backgroundColor: PASTEL.pink.tile }]}><Text style={s.noticeTxt}>{error}</Text></Card>
+        ) : null}
+        <Btn title={busy ? 'กำลังตรวจสอบ...' : 'ยืนยัน'} arrow block disabled={busy} onPress={verify} style={{ marginTop: 6 }} />
+        <Btn
+          title={wait > 0 ? `ขอรหัสใหม่ได้ใน ${wait} วินาที` : 'ขอรหัสใหม่'}
+          variant="outline" block disabled={wait > 0} onPress={resend} style={{ marginTop: 10 }}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+/** ล็อกอินแล้วแต่ยังไม่มีแถวใน profiles → กรอกรหัสนักศึกษา + ตกแต่งโปรไฟล์ */
+function OnboardingScreen() {
+  const { saveProfile, logout } = useApp();
+  const [busy, setBusy] = useState(false);
+  return (
+    <ProfileForm
+      initial={{ studentId: '', name: '', year: 'ปี 1', bio: '', color: 'yellow', emoji: '📚', photo: null, pattern: 'blobs', frame: 'clean', shape: 'circle' }}
+      header={<AuthHeader onBack={logout} title="สร้างโปรไฟล์" sub="อีกขั้นเดียว! ตกแต่งโปรไฟล์ให้เป็นตัวเอง รุ่นพี่รุ่นน้องจะเห็นตอนคุณโพสต์" />}
+      submitLabel={busy ? 'กำลังบันทึก...' : 'สร้างโปรไฟล์'}
+      busy={busy}
+      onSubmit={async (p) => {
+        setBusy(true);
+        await saveProfile(p);
+        setBusy(false);
+      }}
+    />
   );
 }
 
@@ -2986,13 +3122,54 @@ function PassOnApp() {
   const [modal, setModal] = useState(null);
   const [dialog, setDialog] = useState(null);
   const [authKey, setAuthKey] = useState(0);
+  const [session, setSession] = useState(null); // Supabase session
+  const [authChecked, setAuthChecked] = useState(!USE_SUPABASE);
+  const [needsProfile, setNeedsProfile] = useState(false);
   useEffect(() => { dialogHandler = setDialog; return () => { dialogHandler = null; }; }, []);
+
+  /* ---------- Supabase: session + โปรไฟล์ ---------- */
+  /** รวมผู้ใช้จริงจาก Supabase เข้ากับรายชื่อในแอป (ผู้ใช้ตัวอย่างจาก SEED ยังอยู่จนถึงเฟส 3) */
+  const mergeUsers = useCallback((list) => {
+    setData((d) => {
+      const ids = new Set(list.map((u) => u.studentId));
+      return { ...d, users: [...d.users.filter((u) => !ids.has(u.studentId)), ...list] };
+    });
+  }, []);
+
+  const loadMe = useCallback(async (sess) => {
+    if (!sess) { setUser(null); setNeedsProfile(false); return; }
+    try {
+      const [mine, all] = await Promise.all([fetchMyProfile(sess.user.id), fetchAllProfiles()]);
+      mergeUsers(all);
+      if (mine) { setUser(mine); setNeedsProfile(false); }
+      else { setUser(null); setNeedsProfile(true); }
+    } catch (e) {
+      setDbError('โหลดโปรไฟล์ไม่สำเร็จ — ' + authErrorMessage(e));
+    }
+  }, [mergeUsers]);
+
+  useEffect(() => {
+    if (!USE_SUPABASE) return undefined;
+    let alive = true;
+    supabase.auth.getSession().then(async ({ data: { session: sess } }) => {
+      if (!alive) return;
+      setSession(sess);
+      await loadMe(sess);
+      if (alive) setAuthChecked(true);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
+      setSession(sess);
+      // ไม่ await ใน callback (supabase-js แนะนำ) — ส่งต่อไปทำนอก callback
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') setTimeout(() => loadMe(sess), 0);
+    });
+    return () => { alive = false; subscription.unsubscribe(); };
+  }, [loadMe]);
 
   /* ---------- load session + local data ---------- */
   useEffect(() => {
     (async () => {
       try {
-        const rawUser = await AsyncStorage.getItem(USER_KEY);
+        const rawUser = USE_SUPABASE ? null : await AsyncStorage.getItem(USER_KEY);
         if (rawUser) {
           const u = JSON.parse(rawUser);
           if (u && u.studentId) setUser(u);
@@ -3123,6 +3300,24 @@ function PassOnApp() {
     return null;
   };
   const saveProfile = async (p) => {
+    if (USE_SUPABASE) {
+      if (!session) return false;
+      const uidNow = session.user.id;
+      try {
+        if (await isStudentIdTaken(p.studentId, uidNow)) {
+          notify('รหัสนักศึกษานี้มีคนใช้แล้ว', 'ถ้าเป็นรหัสของคุณจริง ติดต่อแอดมินหลักสูตรเพื่อตรวจสอบ');
+          return false;
+        }
+        const saved = await saveMyProfile(uidNow, p, user);
+        mergeUsers([saved]);
+        setUser(saved);
+        setNeedsProfile(false);
+        return true;
+      } catch (e) {
+        notify('บันทึกโปรไฟล์ไม่สำเร็จ', authErrorMessage(e));
+        return false;
+      }
+    }
     const clean = {
       studentId: p.studentId, name: p.name, year: p.year || '', bio: p.bio || '', color: p.color || 'yellow',
       emoji: p.emoji || '📚', photo: p.photo || null, createdAt: p.createdAt || new Date().toISOString(),
@@ -3147,15 +3342,19 @@ function PassOnApp() {
     reset('home');
   };
   const logout = () => {
-    notify('ออกจากระบบ', 'ต้องการออกจากระบบใช่ไหม? ข้อมูลโปรไฟล์และโพสต์ของคุณยังอยู่ครบ เข้าสู่ระบบใหม่ด้วยรหัสนักศึกษาได้ทุกเมื่อ', [
+    notify('ออกจากระบบ', USE_SUPABASE
+      ? 'ต้องการออกจากระบบใช่ไหม? ข้อมูลโปรไฟล์และโพสต์ของคุณยังอยู่ครบ เข้าสู่ระบบใหม่ด้วยอีเมลเดิมได้ทุกเมื่อ'
+      : 'ต้องการออกจากระบบใช่ไหม? ข้อมูลโปรไฟล์และโพสต์ของคุณยังอยู่ครบ เข้าสู่ระบบใหม่ด้วยรหัสนักศึกษาได้ทุกเมื่อ', [
       { text: 'ยกเลิก', style: 'cancel' },
       {
         text: 'ออกจากระบบ', style: 'destructive', onPress: () => {
-          AsyncStorage.removeItem(USER_KEY).catch(() => {});
+          if (USE_SUPABASE) supabase.auth.signOut().catch(() => {});
+          else AsyncStorage.removeItem(USER_KEY).catch(() => {});
           setModal(null);
           setStack([{ name: 'home', params: {} }]);
-          setAuthKey((k) => k + 1); // เปิดหน้าลงทะเบียนใหม่ทุกครั้ง
+          setAuthKey((k) => k + (USE_SUPABASE ? 0 : 1)); // เดโม: เปิดหน้าลงทะเบียนใหม่ / Supabase: กลับหน้าแรก
           setAdminUnlocked(false);
+          setNeedsProfile(false);
           setUser(null);
         },
       },
@@ -3294,7 +3493,7 @@ function PassOnApp() {
   /* ---------- render ---------- */
   const statusBar = <StatusBar barStyle={c.dark ? 'light-content' : 'dark-content'} backgroundColor={c.bg} />;
 
-  if (!ready || (!fontsLoaded && !fontError)) {
+  if (!ready || !authChecked || (!fontsLoaded && !fontError)) {
     return (
       <View style={[s.root, s.center]}>
         {statusBar}
@@ -3309,7 +3508,11 @@ function PassOnApp() {
       <Ctx.Provider value={ctx}>
         <View style={[s.root, safe]}>
           {statusBar}
-          <View style={s.shell}><AuthFlow key={authKey} initialStep={authKey ? 'register' : 'welcome'} /></View>
+          <View style={s.shell}>
+            {USE_SUPABASE && session && needsProfile
+              ? <OnboardingScreen />
+              : <AuthFlow key={authKey} initialStep={authKey ? 'register' : 'welcome'} />}
+          </View>
           <DialogBox dialog={dialog} onClose={() => setDialog(null)} />
         </View>
       </Ctx.Provider>

@@ -139,10 +139,18 @@ supabase/
 - [ ] แทน `stack` / `TABS` ทำมือด้วย router
 - [ ] แอปต้องรันได้เหมือนเดิม (ยังใช้ SEED ในเครื่อง) — ตรวจทุกหน้าก่อนไปต่อ
 
-### เฟส 2 — Auth + โปรไฟล์
-- [ ] `src/lib/supabase.ts`, หน้า login/OTP/onboarding
-- [ ] ProfileForm บันทึกลง `profiles`, อัปโหลดรูปโปรไฟล์ไป bucket `avatars` (ใช้ `prepareImage` เดิมย่อรูป)
-- [ ] RLS `profiles` + ทดสอบด้วย 2 บัญชี
+### เฟส 2 — Auth + โปรไฟล์ ✅ (7 พ.ย. 2569 — ทำก่อนเฟส 1 ตามที่ตกลง ยังอยู่ใน `App.js`)
+- [x] `src/lib/supabase.js` (client + AsyncStorage), `src/api/profiles.js` (แปลงแถว ↔ ผู้ใช้แบบแอป, บันทึกโปรไฟล์/รูป/วิชาที่ถนัด)
+- [x] หน้า อีเมล → รหัส OTP → สร้างโปรไฟล์ (`EmailLoginScreen`, `VerifyCodeScreen`, `OnboardingScreen`) — ถ้าไม่มี `.env.local` แอปกลับไปโหมดเดโมเดิม
+- [x] แก้โปรไฟล์ / ออกจากระบบ / จำ session ข้ามการเปิดแอป
+- [x] ทดสอบผ่าน API ด้วย JWT จริง 14 ข้อ + ทดสอบบนเว็บว่าอีเมลนอก มธ. ถูกปฏิเสธ
+- [x] แก้บั๊ก: ลบรูปโปรไฟล์เก่าไม่ได้ (ขาด SELECT policy) → migration `0600`
+- [x] ล็อกรหัสนักศึกษาฝั่ง DB (แก้ได้เฉพาะแอดมิน) → migration `0700`
+- [ ] **ต้องทำใน Supabase Dashboard เอง** (MCP ตั้งค่า Auth ไม่ได้):
+  1. Authentication → Email Templates → **Magic Link** และ **Confirm signup**: ใส่ `{{ .Token }}` ในเนื้อหา เช่น `<p>รหัสเข้าสู่ระบบ Pass On: <b>{{ .Token }}</b></p>` — ค่าเริ่มต้นส่งแค่ลิงก์ ไม่มีรหัส
+  2. อีเมลในตัวของ Supabase ส่งได้ไม่กี่ฉบับต่อชั่วโมง — ก่อนให้เพื่อนใช้ ตั้ง Custom SMTP (Authentication → SMTP Settings เช่น Resend / Brevo ฟรี)
+- [ ] ผู้ใช้ตัวอย่าง (SEED) ยังแสดงคู่กับผู้ใช้จริงจนกว่าโพสต์จะย้ายในเฟส 3
+- [ ] โหมดแอดมินยังใช้ PIN เดิม — เปลี่ยนเป็น `role` ในเฟส 4
 
 ### เฟส 3 — โพสต์ ไฟล์ ไลก์ คอมเมนต์ (หัวใจของแอป)
 - [ ] `api/posts.ts` อ่าน/สร้าง, ฟิลเตอร์หมวด/วิชา, หน้า Browse/Contributors/Person
