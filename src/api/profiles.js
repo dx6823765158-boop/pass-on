@@ -124,7 +124,7 @@ export async function saveMyProfile(uid, p, previous) {
 /** ข้อความผิดพลาดภาษาไทยสำหรับ error ที่เจอบ่อย */
 export function authErrorMessage(e) {
   const msg = String((e && e.message) || e || '');
-  if (/Database error saving new user|dome\.tu\.ac\.th/i.test(msg)) return 'สมัครได้เฉพาะอีเมลมหาวิทยาลัย (@dome.tu.ac.th)';
+  if (/Database error saving new user|tu\.ac\.th/i.test(msg)) return 'สมัครได้เฉพาะอีเมลมหาวิทยาลัยธรรมศาสตร์ (@dome.tu.ac.th หรือ @...tu.ac.th)';
   if (/rate limit|too many|security purposes/i.test(msg)) return 'ขอรหัสบ่อยเกินไป รอสักครู่แล้วลองใหม่';
   if (/expired|invalid/i.test(msg)) return 'รหัสไม่ถูกต้องหรือหมดอายุ ลองขอรหัสใหม่';
   if (/profiles_student_id_key|duplicate key/i.test(msg)) return 'รหัสนักศึกษานี้มีคนใช้แล้ว';
